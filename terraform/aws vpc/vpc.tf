@@ -59,3 +59,22 @@ resource "aws_internet_gateway" "IGW" {
     Name = "simple_vpc_IGW"
   }
 }
+
+# rtb 생성
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.simple_vpc.id
+  
+  tags = {
+    Name = "public_rt"
+  }
+}
+
+resource "aws_route_table_association" "public_rt_association_1" {
+  subnet_id = aws_subnet.public_subnet1.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+resource "aws_route_table_association" "public_rt_association_2" {
+  subnet_id = aws_subnet.public_subnet2.id
+  route_table_id = aws_route_table.public_rt.id
+}
