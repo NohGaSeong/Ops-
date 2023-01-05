@@ -1,3 +1,4 @@
+# VPC 생성
 resource "aws_vpc" "simple_vpc" {
   cidr_block = "10.0.0.0/16"
   tags = {
@@ -5,6 +6,7 @@ resource "aws_vpc" "simple_vpc" {
   }
 }
 
+# Subnet 생성(pub-1, pub-2, pri-1, pri-2)
 resource "aws_subnet" "public_subnet1" {
   vpc_id = aws_vpc.simple_vpc.id
   cidr_block = "10.0.0.0/24"
@@ -46,5 +48,14 @@ resource "aws_subnet" "private_subnet2" {
   
   tags = {
     Name = "private_subnet2"
+  }
+}
+
+# igw 생성
+
+resource "aws_internet_gateway" "IGW" {
+  vpc_id = aws_vpc.simple_vpc.id
+  tags = {
+    Name = "simple_vpc_IGW"
   }
 }
