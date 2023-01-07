@@ -1,0 +1,29 @@
+stg-server:
+    container_name: application-stg-server
+    image: openjdk:11-jdk
+    build:
+        context: .
+        dockerfile: Dockerfile
+    ports:
+        - “8000:8000”
+    export:
+        - 8000
+    volumes: /tmp
+
+prod-server:
+    container_name: application-prod-server
+    image: openjdk:11-jdk
+    build:
+        context: .
+        dockerfile: Dockerfile
+    ports:
+        - "8080:8080"
+    export:
+        - 8080
+    volumes: /tmp
+
+redis:
+    container_name: application-redis
+    image: redis
+    ports:
+        - 6379:6379
