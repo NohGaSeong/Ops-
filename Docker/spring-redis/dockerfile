@@ -10,7 +10,20 @@ ARG JAR_FILE=build/libs/application-1.0.jar
 ADD ${JAR_FILE} ./application-1.0.jar
 
 
-RUN java -Djarmode=layertools -jar application-1.0.jar extract
+RUN java -Djarmode=layertools -jarFROM python:3.10.5
+
+ENV BUILDKIT_PROGRESS=plain
+
+# Copy Source Codes
+COPY . /daliyInGsm
+WORKDIR /daliyInGsm
+
+# Install Python Packages
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
+
+# Copy Entrypoint Script
+COPY docker-entrypoint.production.sh /docker-entrypoint.production.sh
+RUN chmod +x /docker-entrypoint.production.sh application-1.0.jar extract
 
 COPY build/libs/dependencies/ ./
 RUN true
