@@ -1,0 +1,14 @@
+FROM python:3.10.5
+
+ENV BUILDKIT_PROGRESS=plain
+
+# Copy Source Codes
+COPY . /application
+WORKDIR /application
+
+# Install Python Packages
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
+
+# Copy Entrypoint Script
+COPY docker-entrypoint.production.sh /docker-entrypoint.production.sh
+RUN chmod +x /docker-entrypoint.production.sh
