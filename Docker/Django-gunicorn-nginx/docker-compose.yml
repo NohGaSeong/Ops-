@@ -1,26 +1,34 @@
-version: "3"
+version: "2"
+
 services:
-    django:
-        build:
-            context: .
-            dockerfile: Dockerfile.production
-        image: 838235863925.dkr.ecr.ap-northeast-2.amazonaws.com/dig
-        ports:
-            - "8000:8000"
-        container_name: django-container
-        entrypoint:
-            - /docker-entrypoint.production.sh
-    nginx:
-        build:
-            context: ./nginx
-            dockerfile: ./Dockerfile.production
-        image: 838235863925.dkr.ecr.ap-northeast-2.amazonaws.com/dig
-        ports:
-            - "80:80"
-        container_name: nginx-container
-        ports:
-            - "80"
-        depends_on:
-            - django
-        entrypoint:
-            - /docker-entrypoint.production.sh
+  nginx:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80/tcp"
+    volumes:
+      # nginx 설정파일을 로컬의 ./nginx 폴더에 넣어준 후 연결
+      - ./nginx:/etc/nginx/conf.d
+
+      # Django와 사용하는 static 폴더
+      - ./static:/staticfiles
+    depends_on:
+      - django_web
+  
+  django_web:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    image: 838235863925.dkr.ecr.ap-northeast-2.amazonaws.com/dig
+    container_name: django_web
+
+    # gunicorn를 사용하여 8000번 포트로 서비스
+    command: gunicorn --bind 0.0.0.0:8000 dockerproject.wsgi:application
+    volumes:
+      # nginx와 사용하는 static 폴더
+      - ./static:/usr/src/app/staticfiles
+    expose: 
+      - "8000"
