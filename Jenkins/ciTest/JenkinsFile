@@ -35,7 +35,7 @@ pipeline {
         }
         stage('clone project') {
             steps {
-                git url: "$REPOSITORY_URL",
+                git url: "$REPOSITORY_URL/Jenkins",
                     branch: "$TARGET_BRANCH",
                     credentialsId: "$REPOSITORY_CREDENTIAL_ID"
                 sh "ls -al"
