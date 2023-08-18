@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello
+spec:
+  completions: 10 # 몇 번 성공시킬지
+  parallelism: 2  # 최대 동시 실행 횟수
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: hello
+        image: ubuntu:focal
+        command: ["sh", "-c", "sleep 2; echo Hello, World!"]
