@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: default-backend
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  spec:
+    ingressClassname: nginx
+    # 밑에 있는 룰 중에 아무것도 속하지 않을 경우 해당 백엔드로 보내라는 의미임.
+    # 예외 처리 같은 느낌일까?
+    defaultBackend:
+      service:
+        name: httpd
+        port:
+          number: 80
+    rules:
+    - host: hello.fastcampus
+      http:
+        paths:
+        - path: / 
+          pathType: Perfix
+          backend:
+            service:
+              name: hello
+              port:
+                name: http
+    - host: grafana.fastcampus
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend: 
+            service:
+              name: grafana
+              port:
+                name: http
