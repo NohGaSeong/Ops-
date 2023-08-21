@@ -11,14 +11,14 @@ pipeline{
         booleanParam(name : 'DEPLOY_WORKLOAD', defaultValue : true, description : 'DEPLOY_WORKLOAD')
 
         // CI
-        string(name : 'AWS_ACCOUNT_ID', defaultValue : $(env.AWS_ACCOUNT_ID), description : 'AWS_ACCOUNT_ID')
+        string(name : 'AWS_ACCOUNT_ID', defaultValue : ${env.AWS_ACCOUNT_ID}, description : 'AWS_ACCOUNT_ID')
         string(name : 'DOCKER_IMAGE_NAME', defaultValue : 'demo', description : 'DOCKER_IMAGE_NAME')
         string(name : 'DOCKER_TAG', defaultValue : 'latest', description : 'DOCKER_TAG')
 
         // CD
         string(name : 'TARGET_SVR_USER', defaultValue : 'ec2-user', description : 'TARGET_SVR_USER')
         string(name : 'TARGET_SVR_PATH', defaultValue : '/home/ec2-user/', description : 'TARGET_SVR_PATH')
-        string(name : 'TARGET_SVR', defaultValue : $(env.TARGET_SVR), description : 'TARGET_SVR')
+        string(name : 'TARGET_SVR', defaultValue : ${env.TARGET_SVR}, description : 'TARGET_SVR')
     }
 
     environment{
@@ -28,4 +28,94 @@ pipeline{
         ECR_DOCKER_TAG = "${params.DOCKER_TAG}"
     }
 
+    stages{
+        stage("===Build Docker Image==="){
+            when { expression { return params.BUILD_DOCKER_IMAGE } }
+            agent { label 'build' }
+            steps{
+                dir("${env.WORKSPACE}") {
+                    sh 'docker build -t ${ECR_DOCKER_IMAGE}:${ECR_DOCKER_TAG} .'
+                }
+            }
+            post{
+                success{
+                    echo "Docker build success"
+                }
+                failure{
+                    echo "Docker build failed..."
+                }
+            }
+        }
+
+        stage("===Run test Code==="){
+            when { expression { return params.RUN_TEST }}
+            agent { label 'build' }
+            stops {
+                sh '''
+                    aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY}
+                    docker run --rm ${ECR_DOCKER_IMAGE}:${ECR_DOCKER_TAG} /root/.local/bin/pytest -v
+                '''
+            }
+        }
+
+        stage('===push docker image==='){
+            when { expression { return params.PUSH_DOCKER_IMAGE } }
+            agent { label 'build' }
+            steps { 
+                echo "Push Docker Image to ECR"
+                sh '''
+                    aws ecr get-login-password --region ${REGION} | docker login --usrname AWS --password-stdin ${ECR_REPOSITORY}
+                    docker push ${ECR_DOCKER_IMAGE}:${ECR_DOCKER_TAG}
+                '''
+            }
+        }
+
+        stage('===prompt for deploy==='){
+            when { expression { return params.PUSH_DOCKER_IMAGE } }
+            agent { label 'deploy' }
+            steps {
+                script {
+                    env.APPROAL_NUM = input message: 'Please enter the approval number',
+                                        parameters: [string(defaultValue: '',
+                                                    description: '',
+                                                    name: 'APPROVAL_NUM')]
+                }
+
+                echo "${env.APPROAL_NUM}"
+            }
+        }
+
+        stage('===Deploy workload==='){
+            when { expressin { return params.DEPLOY_WORKLOAD } }
+            agent { label 'deploy' }
+            steps {
+                sshagent (credentials: ['aws_ec2_user_ssh']){
+                    sh """
+                    #!/bin/bash
+                        scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+                        docker-compose.yml \
+                        ${params.TARGET_SVR_USER}@${params.TARGET_SVR}:${params.TARGET_SVR_PATH};
+
+                        ssh -o UserKnownHostFile=/dev/null -o StrictHostKeyChecking=no \
+                        ${params.TARGET_SVR_USER}@${params.TARGET_SVR} \
+                        'aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY}; \
+                        export IMAGE=${ECR_DOCKER_IMAGE}; \
+                        export TAG=${ECR_DOCKER_TAG}; \
+                        docker-compose -f docker-compose.yml down;
+                        docker-compose -f docker-compose.yml up -d';
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        failure{
+            slackSend(
+                channel: "#jenkins_test",
+                color: "danger",
+                message: "[Failed] Job:${env.JOB_NAME}, Build num:#${env.BUILD_NUMBER} @channel (<${env.RUN_DISPLAY_URL}|open job detail>)"
+            )
+        }
+    }
 }
