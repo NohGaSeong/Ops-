@@ -1,0 +1,31 @@
+pipeline{
+    agent{
+        label "master"
+    }
+
+    parameters {
+        booleanParam(name : 'BUILD_DOCKER_IMAGE', defaultValue : true, description : 'BUILD_DOCKER_IMAGE')
+        booleanParam(name : 'RUN_TEST', defaultValue : true, description : 'RUN_TEST')
+        booleanParam(name : 'PUSH_DOCKER_IMAGE', defaultValue : true, description : 'PUSH_DOCKER_IMAGE')
+        booleanParam(name : 'PROMPT_FOR_DEPLOY', defaultValue : false, description : 'PROMPT_FOR_DEPLOY')
+        booleanParam(name : 'DEPLOY_WORKLOAD', defaultValue : true, description : 'DEPLOY_WORKLOAD')
+
+        // CI
+        string(name : 'AWS_ACCOUNT_ID', defaultValue : $(env.AWS_ACCOUNT_ID), description : 'AWS_ACCOUNT_ID')
+        string(name : 'DOCKER_IMAGE_NAME', defaultValue : 'demo', description : 'DOCKER_IMAGE_NAME')
+        string(name : 'DOCKER_TAG', defaultValue : 'latest', description : 'DOCKER_TAG')
+
+        // CD
+        string(name : 'TARGET_SVR_USER', defaultValue : 'ec2-user', description : 'TARGET_SVR_USER')
+        string(name : 'TARGET_SVR_PATH', defaultValue : '/home/ec2-user/', description : 'TARGET_SVR_PATH')
+        string(name : 'TARGET_SVR', defaultValue : $(env.TARGET_SVR), description : 'TARGET_SVR')
+    }
+
+    environment{
+        REGION = "ap-northeast-2"
+        ECR_REPOSITORY = "${params.AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com"
+        ECR_DOCKER_IMAGE = "${ECR_REPOSITORY}/${params.DOCKER_IMAGE_NAME}"
+        ECR_DOCKER_TAG = "${params.DOCKER_TAG}"
+    }
+
+}
